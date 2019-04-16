@@ -1,0 +1,12 @@
+# Archives
+*.zip
+*.tar.*
+*.rar
+*.jar
+
+# Binaries and object files
+*.o
+*.exe
+*.obj
+**/out
+
