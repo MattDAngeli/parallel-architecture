@@ -32,6 +32,15 @@
 double compute_using_pthreads (float, float, int, float, int);
 double compute_gold (float, float, int, float);
 
+typedef struct thread_data {
+   int tid; // Thread ID
+   int n_threads;
+   float lower_bound; // Lower bound of the integral
+   float upper_bound; // Upper bound of the integral
+   float trapezoid_width; // Width of the trapezoids
+   float n_trapezoids; // Number of trapezoids
+}
+
 int main ( int argc, char **argv ) 
 {
    if (argc < 5) {
@@ -107,6 +116,10 @@ double compute_gold (float a, float b, int n, float h)
 double compute_using_pthreads (float a, float b, int n, float h, int num_threads)
 {
    double integral = 0.0;
+
+   double *integral_parts = (double *) malloc( sizeof(double) * num_threads );
+
+   free( integral_parts );
 
    return integral;
 }
