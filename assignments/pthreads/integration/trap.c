@@ -1,8 +1,8 @@
 /*  Purpose: Calculate definite integral using trapezoidal rule.
  *
- * Input:   a, b, n, num_threads
+ * Input:   a, b, n_trapezoids, n_threads
  * Output:  Estimate of integral from a to b of f(x)
- *          using n trapezoids, with num_threads.
+ *          using n_trapezoids trapezoids, with n_threads.
  *
  * Compile: gcc -o trap trap.c -O3 -std=c99 -Wall -lpthread -lm
  * Usage:   ./trap
@@ -21,6 +21,8 @@
 #  define NOMINMAX 
 #endif
 
+#define _REENTRANT // Ensure multi-thread safety of library functions
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -28,6 +30,7 @@
 #include <float.h>
 #include <time.h>
 #include <pthread.h>
+#include <unistd.h>
 
 double compute_using_pthreads (float, float, int, float, int);
 double compute_gold (float, float, int, float);
@@ -54,18 +57,18 @@ int main ( int argc, char **argv )
 
    float a = atoi (argv[1]); /* Lower limit */
    float b = atof (argv[2]); /* Upper limit */
-   float n = atof (argv[3]); /* Number of trapezoids */
+   float n_trapezoids = atof (argv[3]); /* Number of trapezoids */
 
-   float h = (b - a)/(float) n; /* Base of each trapezoid */  
+   float h = (b - a)/(float) n_trapezoids; /* Base of each trapezoid */  
    printf ("The base of the trapezoid is %f \n", h);
 
-   double reference = compute_gold (a, b, n, h);
+   double reference = compute_gold (a, b, n_trapezoids, h);
    printf ("Reference solution computed using single-threaded version = %f \n", reference);
 
    /* Write this function to complete the trapezoidal rule using pthreads. */
-   int num_threads = atoi (argv[4]); /* Number of threads */
-   double pthread_result = compute_using_pthreads (a, b, n, h, num_threads);
-   printf ("Solution computed using %d threads = %f \n", num_threads, pthread_result);
+   int n_threads = atoi (argv[4]); /* Number of threads */
+   double pthread_result = compute_using_pthreads (a, b, n_trapezoids, h, n_threads);
+   printf ("Solution computed using %d threads = %f \n", n_threads, pthread_result);
 
    exit(EXIT_SUCCESS);
 } 
@@ -86,18 +89,18 @@ float f (float x)
 /*------------------------------------------------------------------
  * Function:    compute_gold
  * Purpose:     Estimate integral from a to b of f using trap rule and
- *              n trapezoids using a single-threaded version
- * Input args:  a, b, n, h
+ *              n_trapezoids trapezoids using a single-threaded version
+ * Input args:  a, b, n_trapezoids, h
  * Return val:  Estimate of the integral 
  */
-double compute_gold (float a, float b, int n, float h) 
+double compute_gold (float a, float b, int n_trapezoids, float h) 
 {
    double integral;
    int k;
 
    integral = (f(a) + f(b))/2.0;
 
-   for (k = 1; k <= n-1; k++) 
+   for (k = 1; k <= n_trapezoids-1; k++) 
      integral += f(a+k*h);
    
    integral = integral*h;
@@ -109,17 +112,25 @@ double compute_gold (float a, float b, int n, float h)
 /*------------------------------------------------------------------
  * Function:	compute_using_pthreads
  * Purpose:	Estimate integral from a to b of f using trap rule and
- * 		n trapezoids using multiple threads
- * Input args:	a, b, n, h, num_threads
+ * 		n_trapezoids trapezoids using multiple threads
+ * Input args:	a, b, n_trapezoids, h, n_threads
  * Return val:	Estimate of the integral
  */
-double compute_using_pthreads (float a, float b, int n, float h, int num_threads)
+double compute_using_pthreads (float a, float b, int n_trapezoids, float h, int n_threads)
 {
-   double integral = 0.0;
+   double integral = ( f(a) + f(b) ) / 2.0;
 
-   double *integral_parts = (double *) malloc( sizeof(double) * num_threads );
+   thread_data *td = (thread_data *) malloc( sizeof( thread_data ) * n_threads );
 
-   free( integral_parts );
+   int chunk_size = (int) floor( (float)
+
+   // Define structure where thread IDs will be stored
+   pthread_t *thread_id = (pthread_t *) malloc( sizeof( pthread_t ) * n_threads );
+   
+   pthread_attr_t attributes; // Thread attributes
+   pthread_attr_init( &attributes ); // Initialize thread attributes to default
+
+   free( (void *) thread_data );
 
    return integral;
 }
