@@ -35,14 +35,20 @@
 double compute_using_pthreads (float, float, int, float, int);
 double compute_gold (float, float, int, float);
 
-typedef struct thread_data {
+void *trap_integrate( void *args );
+
+typedef struct thread_data_t {
    int tid; // Thread ID
    int n_threads;
-   float lower_bound; // Lower bound of the integral
-   float upper_bound; // Upper bound of the integral
-   float trapezoid_width; // Width of the trapezoids
+   int chunk_size;
+   float a; // Lower bound of the integral
+   float b; // Upper bound of the integral
+   float offset;
+   float h; // Width of the trapezoids
    float n_trapezoids; // Number of trapezoids
-}
+   double *integral;
+   pthread_mutex_t *mutex_for_integral;
+} thread_data_t;
 
 int main ( int argc, char **argv ) 
 {
@@ -118,20 +124,66 @@ double compute_gold (float a, float b, int n_trapezoids, float h)
  */
 double compute_using_pthreads (float a, float b, int n_trapezoids, float h, int n_threads)
 {
-   double integral = ( f(a) + f(b) ) / 2.0;
-
-   thread_data *td = (thread_data *) malloc( sizeof( thread_data ) * n_threads );
-
-   int chunk_size = (int) floor( (float)
-
    // Define structure where thread IDs will be stored
    pthread_t *thread_id = (pthread_t *) malloc( sizeof( pthread_t ) * n_threads );
    
    pthread_attr_t attributes; // Thread attributes
    pthread_attr_init( &attributes ); // Initialize thread attributes to default
 
+   // Mutex setup
+   pthread_mutex_t mutex_for_integral;
+   pthread_mutex_init( &mutex_for_integral, NULL );
+
+   // Allocate heap space for thread data and create worker threads
+   int i;
+   double integral = ( f(a) + f(b) ) / 2.0;
+   thread_data_t *thread_data = (thread_data_t *) malloc( sizeof( thread_data_t ) * n_threads );
+
+   for (i = 0; i < n_threads; i++) {
+      thread_data[i].tid = i;
+      thread_data[i].n_threads = n_threads;
+      thread_data[i].n_trapezoids = n_trapezoids;
+      thread_data[i].chunk_size = chunk_size;
+      thread_data[i].a = a;
+      thread_data[i].b = b;
+      thread_data[i].h = h;
+      thread_data[i].offset = i * chunk_size * h;
+      thread_data[i].integral = &integral;
+      thread_data[i].mutex_for_integral = &mutex_for_integral;
+   }
+
+   for (i = 0; i < n_threads; i++) 
+      pthread_create( &thread_id[i], &attributes, trap_integrate, (void *) &thread_data[i] );
+
+   for (i = 0; i < n_threads; i++)
+      pthread_join( thread_id[i], NULL );
+
    free( (void *) thread_data );
 
    return integral;
+}
+
+void *trap_integrate( void *thread_data )
+{
+   // Cast argument to appropriate type
+   thread_data_t *td = (thread_data_t *) args;
+
+   // Compute partial integral for which this thread is responsible
+   double partial_integral = 0.0;
+   if (td->tid < (td->n_threads - 1)) {
+      for (float i = td->offset + td->h; i <= (i+1) * td->offset; i+=td->h) {
+         partial_integral += f( i );
+      }
+   } else {
+      for (float i = td->offset + td->h; i < td->b; i+=td->h) {
+         partial_integral += f( i );
+      }
+   }
+
+   pthread_mutex_lock( td->mutex_for_integral );
+   *(td->integral) += partial_integral;
+   pthread_mutex_unlock( td->mutex_for_integral );
+
+   pthread_exit( NULL );
 }
 
