@@ -164,7 +164,7 @@ double compute_using_pthreads (float a, float b, int n_trapezoids, float h, int 
    return integral;
 }
 
-void *trap_integrate( void *thread_data )
+void *trap_integrate( void *args )
 {
    // Cast argument to appropriate type
    thread_data_t *td = (thread_data_t *) args;
