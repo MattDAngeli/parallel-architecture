@@ -28,7 +28,7 @@
 #include <string.h>
 #include <math.h>
 #include <float.h>
-#include <time.h>
+#include <sys/time.h>
 #include <pthread.h>
 #include <unistd.h>
 
@@ -68,13 +68,28 @@ int main ( int argc, char **argv )
    float h = (b - a)/(float) n_trapezoids; /* Base of each trapezoid */  
    printf ("The base of the trapezoid is %f \n", h);
 
+   struct timeval start, stop;
+   
+   gettimeofday( &start, NULL );
    double reference = compute_gold (a, b, n_trapezoids, h);
+   gettimeofday( &stop, NULL );
+
    printf ("Reference solution computed using single-threaded version = %f \n", reference);
+   printf("Execution time = %fs.\n", (float)(stop.tv_sec - start.tv_sec +\
+            (stop.tv_usec - start.tv_usec)/(float)1000000));
+   printf("\n");
 
    /* Write this function to complete the trapezoidal rule using pthreads. */
    int n_threads = atoi (argv[4]); /* Number of threads */
+
+   gettimeofday( &start, NULL );
    double pthread_result = compute_using_pthreads (a, b, n_trapezoids, h, n_threads);
+   gettimeofday( &start, NULL );
+
    printf ("Solution computed using %d threads = %f \n", n_threads, pthread_result);
+   printf("Execution time %fs.\n", (float)(stop.tv_sec - start.tv_sec +\
+            (stop.tv_usec - start.tv_usec)/(float)1000000));
+   printf("\n");
 
    exit(EXIT_SUCCESS);
 } 
