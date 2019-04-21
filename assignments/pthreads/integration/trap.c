@@ -148,7 +148,6 @@ double compute_using_pthreads (float a, float b, int n_trapezoids, float h, int 
       thread_data[i].a = a;
       thread_data[i].b = b;
       thread_data[i].h = h;
-      thread_data[i].offset = i * chunk_size * h + h;
       thread_data[i].integral = &integral;
       thread_data[i].mutex_for_integral = &mutex_for_integral;
    }
@@ -171,27 +170,22 @@ void *trap_integrate( void *args )
    // Cast argument to appropriate type
    thread_data_t *td = (thread_data_t *) args;
 
-   // DEBUG
-   printf("[TID %d] I'm alive!\n", td->tid);
+   //printf("[TID %d] I'm alive!\n", td->tid);
 
    // Compute partial integral for which this thread is responsible
    double partial_integral = 0.0;
    if (td->tid < (td->n_threads - 1)) {
-      printf("[TID %d] I'm going to compute the partial integral...\n", td->tid);
-      for (
-            float i = td->a + td->offset; 
-            i <= td->a + (i+1) * td->chunk_size * td->h; 
-            i+=td->h
-            ) 
+      //printf("[TID %d] I'm going to compute the partial integral...\n", td->tid);
+      for ( int k = 1 + td->tid * td->chunk_size; k <= (td->tid + 1) * td->chunk_size; k++ ) 
       {
-         printf("[TID %d] My iterator is at %f\n", td->tid, i);
-         partial_integral += f( i );
+         //printf("[TID %d] My iterator is at %f\n", td->tid, i);
+         partial_integral += f( td->a + k * td->h );
       }
    } else {
-      printf("[TID %d] I'm going to finish this set!\n", td->tid);
-      for (float i = td-> a + td->offset; i < td->b; i+=td->h) {
-         printf("[TID %d] My iterator is at %f\n", td->tid, i);
-         partial_integral += f( i );
+      //printf("[TID %d] I'm going to finish this set!\n", td->tid);
+      for ( int k = 1 + td->tid * td->chunk_size; k < td->n_trapezoids; k++ ) {
+         //printf("[TID %d] My iterator is at %d\n", td->tid, k);
+         partial_integral += f( td->a + k * td->h );
       }
    }
 
