@@ -84,7 +84,7 @@ int main ( int argc, char **argv )
 
    gettimeofday( &start, NULL );
    double pthread_result = compute_using_pthreads (a, b, n_trapezoids, h, n_threads);
-   gettimeofday( &start, NULL );
+   gettimeofday( &stop, NULL );
 
    printf ("Solution computed using %d threads = %f \n", n_threads, pthread_result);
    printf("Execution time %fs.\n", (float)(stop.tv_sec - start.tv_sec +\
