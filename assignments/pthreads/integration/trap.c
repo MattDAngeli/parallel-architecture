@@ -42,8 +42,6 @@ typedef struct thread_data_t {
    int n_threads;
    int chunk_size;
    float a; // Lower bound of the integral
-   float b; // Upper bound of the integral
-   float offset;
    float h; // Width of the trapezoids
    float n_trapezoids; // Number of trapezoids
    double *integral;
@@ -161,7 +159,6 @@ double compute_using_pthreads (float a, float b, int n_trapezoids, float h, int 
       thread_data[i].n_trapezoids = n_trapezoids;
       thread_data[i].chunk_size = chunk_size;
       thread_data[i].a = a;
-      thread_data[i].b = b;
       thread_data[i].h = h;
       thread_data[i].integral = &integral;
       thread_data[i].mutex_for_integral = &mutex_for_integral;
