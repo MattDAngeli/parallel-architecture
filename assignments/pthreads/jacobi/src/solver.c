@@ -28,38 +28,38 @@ void print_stats (grid_t *);
 double grid_mse (grid_t *, grid_t *);
 
 
-int 
-main (int argc, char **argv)
+int main (int argc, char **argv)
 {	
 	if (argc < 5) {
-        printf ("Usage: %s grid-dimension num-threads min-temp max-temp\n", argv[0]);
-        printf ("grid-dimension: The dimension of the grid\n");
-        printf ("num-threads: Number of threads\n"); 
-        printf ("min-temp, max-temp: Heat applied to the north side of the plate is uniformly distributed between min-temp and max-temp\n");
-        exit (EXIT_FAILURE);
-    }
+    printf ("Usage: %s grid-dimension num-threads min-temp max-temp\n", argv[0]);
+    printf ("grid-dimension: The dimension of the grid\n");
+    printf ("num-threads: Number of threads\n"); 
+    printf ("min-temp, max-temp: Heat applied to the north side of the plate is uniformly distributed between min-temp and max-temp\n");
+    exit (EXIT_FAILURE);
+  }
     
-    /* Parse command-line arguments. */
-    int dim = atoi (argv[1]);
-    int num_threads = atoi (argv[2]);
-    float min_temp = atof (argv[3]);
-    float max_temp = atof (argv[4]);
+  /* Parse command-line arguments. */
+  int dim = atoi (argv[1]);
+  int num_threads = atoi (argv[2]);
+  float min_temp = atof (argv[3]);
+  float max_temp = atof (argv[4]);
     
-    /* Generate the grids and populate them with initial conditions. */
+  /* Generate the grids and populate them with initial conditions. */
  	grid_t *grid_1 = create_grid (dim, min_temp, max_temp);
-    /* Grid 2 should have the same initial conditions as Grid 1. */
-    grid_t *grid_2 = copy_grid (grid_1); 
+
+  /* Grid 2 should have the same initial conditions as Grid 1. */
+  grid_t *grid_2 = copy_grid (grid_1); 
 
 	/* Compute the reference solution using the single-threaded version. */
 	printf ("\nUsing the single threaded version to solve the grid\n");
 	int num_iter = compute_gold (grid_1);
 	printf ("Convergence achieved after %d iterations\n", num_iter);
-    /* Print key statistics for the converged values. */
+  /* Print key statistics for the converged values. */
 	printf ("Printing statistics for the interior grid points\n");
-    print_stats (grid_1);
-#ifdef DEBUG
+  print_stats (grid_1);
+  #ifdef DEBUG
     print_grid (grid_1);
-#endif
+  #endif
 	
 	/* Use pthreads to solve the equation using the jacobi method. */
 	printf ("\nUsing pthreads to solve the grid using the jacobi method\n");
@@ -88,7 +88,8 @@ main (int argc, char **argv)
 int 
 compute_using_pthreads_jacobi (grid_t *grid, int num_threads)
 {		
-    return 1;
+    
+  return 1;
 }
 
 
