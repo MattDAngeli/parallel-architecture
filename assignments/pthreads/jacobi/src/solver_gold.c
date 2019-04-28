@@ -3,7 +3,6 @@
 #include <math.h>
 #include "grid.h"
 
-
 /* This function solves the Gauss-Seidel method on the CPU using a single thread. */
 int 
 compute_gold (grid_t *grid)
@@ -16,7 +15,7 @@ compute_gold (grid_t *grid)
   float eps = 1e-2; /* Convergence criteria. */
   int num_elements; 
 	
-	while(!done) { /* While we have not converged yet. */
+	while (!done) { /* While we have not converged yet. */
     diff = 0.0;
     num_elements = 0;
 
