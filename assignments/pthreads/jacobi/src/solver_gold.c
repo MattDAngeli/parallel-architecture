@@ -4,8 +4,7 @@
 #include "grid.h"
 
 /* This function solves the Gauss-Seidel method on the CPU using a single thread. */
-int 
-compute_gold (grid_t *grid)
+int compute_gold (grid_t *grid)
 {
   int num_iter = 0;
 	int done = 0;
