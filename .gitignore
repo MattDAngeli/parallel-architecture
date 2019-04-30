@@ -12,4 +12,5 @@
 *.exe
 *.obj
 **/out
+**/obj
 
