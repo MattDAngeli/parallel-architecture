@@ -11,6 +11,11 @@
  *
  * Author: Naga Kandasamy
  * Date modified: April 25, 2019
+ *
+ * Student: Matthew D'Angeli
+ * Date completed: 30 April 2019
+ *
+ * Parallelized using OpenMP parallel for w/ reduction variable
  */
 
 #ifdef _WIN32
