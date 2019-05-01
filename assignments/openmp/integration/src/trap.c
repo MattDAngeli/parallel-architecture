@@ -110,19 +110,14 @@ double compute_using_omp (float a, float b, int n_trapezoids, float h, int n_thr
    double integral = ( f(a) + f(b) ) / 2.0;
    int i;
 
-#pragma omp parallel num_threads(n_threads) private(i) reduction(+:integral)
-   {
-#pragma omp for
-      for (i = 1; i <= n_trapezoids - 1; i++) {
-         // printf("[THREAD %d] Adding iteration %d\n", omp_get_thread_num(), i);
-         integral += f(a + i*h);
-      }
-   } // End of OpenMP parallel structure
+#pragma omp parallel for num_threads(n_threads) private(i) reduction(+:integral)
+   for (i = 1; i <= n_trapezoids - 1; i++) {
+      // printf("[THREAD %d] Adding iteration %d\n", omp_get_thread_num(), i);
+      integral += f(a + i*h);
+   }
 
    integral *= h;
 
    return integral;
 }
-
-
 
