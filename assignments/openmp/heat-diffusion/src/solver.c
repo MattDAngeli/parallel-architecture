@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
-#include <time.h>
+#include <sys/time.h>
 #include <stdlib.h>
 #include <math.h>
 #include "grid.h" 
@@ -88,7 +88,45 @@ main (int argc, char **argv)
 int 
 compute_using_omp_jacobi (grid_t *grid, int num_threads)
 {		
-    return 1;
+  int num_iter = 0;
+  int done = 0;
+  int i;
+  int num_elements;
+  int row, col;
+  double diff;
+  float old, new;
+  float eps = 1e-2; // Convergence criteria
+
+    while (!done) {
+      diff = 0.0;
+      num_elements = 0;
+
+#pragma omp parallel for private(i, row, col, old, new) shared(num_iter, done, num_elements) reduction(+:diff)
+    for (i=1; i < (grid->dim * grid->dim - 1); i++) {
+      row = i / grid->dim;
+      col = i % grid->dim;
+      if (row == 0 || row == grid->dim - 1 || col == 0 || col == grid->dim - 1) {
+        continue;
+      }
+      old = grid->element[row * grid->dim + col];
+      new = 0.25 * (
+          grid->element[(row - 1) * grid->dim + col] +\
+          grid->element[(row + 1) * grid->dim + col] +\
+          grid->element[row * grid->dim + (col + 1)] +\
+          grid->element[row * grid->dim + (col - 1)]);
+      grid->element[row * grid->dim + col] = new;
+      diff = diff + fabs(new - old);
+      num_elements++;
+    }
+
+    diff = diff / num_elements;
+    printf("Iteration %d. DIFF: %f.\n", num_iter, diff);
+    num_iter++;
+
+    if (diff < eps)
+      done = 1;
+  }
+  return num_iter;
 }
 
 
