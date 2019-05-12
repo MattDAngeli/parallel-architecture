@@ -15,6 +15,7 @@
 #include <sys/time.h>
 
 /* #define DEBUG */
+#define TILE_SIZE 32
 
 /* Include the kernel code. */
 #include "blur_filter_kernel.cu"
@@ -23,6 +24,13 @@ extern "C" void compute_gold (const image_t, image_t);
 void compute_on_device (const image_t, image_t);
 int check_results (const float *, const float *, int, float);
 void print_image (const image_t);
+
+image_t allocate_image_on_device ( const image_t );
+void copy_image_to_device ( image_t, const image_t );
+void copy_image_from_device ( image_t, const image_t );
+void free_image_on_device ( image_t * );
+void free_image_on_host ( image_t * );
+void check_CUDA_error ( const char * );
 
 int 
 main (int argc, char **argv)
@@ -84,10 +92,92 @@ main (int argc, char **argv)
 }
 
 /* FIXME: Complete this function to calculate the blur on the GPU. */
-void 
-compute_on_device (const image_t in, image_t out)
+void compute_on_device (const image_t in, image_t out)
 {
-    return;
+   // Allocate data structures and copy data to GPU
+   image_t unfiltered_dev = allocate_image_on_device( in );
+   copy_image_to_device( unfiltered_dev, in );
+
+   image_t filtered_dev = allocate_image_on_device( out );
+
+   // Set up execution grid and thread tiles
+   dim3 threads( TILE_SIZE, TILE_SIZE );
+   int grid_dimension = (filtered_dev.size + TILE_SIZE - 1) / TILE_SIZE;
+   printf( "Setting up a %d x %d grid of thread blocks\n", grid_dimension, grid_dimension );
+
+   dim3 grid( grid_dimension, grid_dimension );
+
+   // Launch the kernel
+   blur_filter_kernel <<< grid, threads >>> ( filtered_dev.element, unfiltered_dev.element, in.size );
+
+   // Sync device and host
+   cudaDeviceSynchronize( );
+
+   // Check for errors
+   check_CUDA_error( "Error in kernel execution" );
+
+   // Copy data from device to host
+   copy_image_from_device( out, filtered_dev );
+
+   // Free device memory
+   free_image_on_device( &unfiltered_dev );
+   free_image_on_device( &filtered_dev );
+
+   return;
+}
+
+image_t allocate_image_on_device ( const image_t I )
+{
+   image_t I_device = I;
+   int size = I.size * I.size * sizeof( float );
+
+   cudaMalloc( (void **) &I_device.element, size );
+   if (I_device.element == NULL) {
+      fprintf( stderr, "[ERROR] CUDA malloc error\n" );
+      exit( EXIT_FAILURE );
+   }
+
+   return I_device;
+}
+
+void copy_image_to_device ( image_t I_device, const image_t I_host )
+{
+   int size = I_host.size * I_host.size * sizeof( float );
+   cudaMemcpy( I_device.element, I_host.element, size, cudaMemcpyHostToDevice );
+   return;
+}
+
+void copy_image_from_device ( image_t I_host, const image_t I_device )
+{
+   int size = I_device.size * I_device.size * sizeof( float );
+   cudaMemcpy( I_host.element, I_device.element, size, cudaMemcpyDeviceToHost );
+   return;
+}
+
+void free_image_on_device ( image_t *I )
+{
+   cudaFree( I->element );
+   I->element = NULL;
+   return;
+}
+
+void free_image_on_host ( image_t *I )
+{
+   free( I->element );
+   I->element = NULL;
+   return;
+}
+
+// Check for errors during kernel execution
+void check_CUDA_error ( const char *msg )
+{
+   cudaError_t err = cudaGetLastError( );
+   if (cudaSuccess != err) {
+      fprintf( stderr, "[CUDA ERROR] %s (%s).\n", msg, cudaGetErrorString( err ) );
+      exit( EXIT_FAILURE );
+   }
+
+   return;
 }
 
 /* Function to check correctness of the results. */
