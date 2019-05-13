@@ -14,8 +14,9 @@
 #include <math.h>
 #include <sys/time.h>
 
-/* #define DEBUG */
+//#define DEBUG 1
 #define TILE_SIZE 32
+#define EPS 1e-6
 
 /* Include the kernel code. */
 #include "blur_filter_kernel.cu"
@@ -29,8 +30,8 @@ image_t allocate_image_on_device ( const image_t );
 void copy_image_to_device ( image_t, const image_t );
 void copy_image_from_device ( image_t, const image_t );
 void free_image_on_device ( image_t * );
-void free_image_on_host ( image_t * );
 void check_CUDA_error ( const char * );
+void print_exec_time ( struct timeval , struct timeval );
 
 int 
 main (int argc, char **argv)
@@ -60,23 +61,36 @@ main (int argc, char **argv)
     for (int i = 0; i < size * size; i++)
         in.element[i] = rand ()/ (float) RAND_MAX -  0.5;
         // in.element[i] = 1;
+
+   struct timeval start, stop;
   
    /* Calculate the blur on the CPU. The result is stored in out_gold. */
-    printf ("Calculating blur on the CPU\n");
+   printf ("Calculating blur on the CPU\n");
+   gettimeofday( &start, NULL );
    compute_gold (in, out_gold); 
-#ifdef DEBUG 
-   print_image (in);
-   print_image (out_gold);
-#endif
+   gettimeofday( &stop, NULL );
+   print_exec_time( start, stop );
 
    /* Calculate the blur on the GPU. The result is stored in out_gpu. */
    printf ("Calculating blur on the GPU\n");
    compute_on_device (in, out_gpu);
 
+#ifdef DEBUG 
+   fprintf( stderr, "Input:\n");
+   print_image (in);
+
+   fprintf( stderr, "CPU Output:\n");
+   print_image (out_gold);
+
+   fprintf( stderr, "GPU Output:\n");
+   print_image( out_gpu );
+#endif
+
+
    /* Check the CPU and GPU results for correctness. */
    printf ("Checking CPU and GPU results\n");
    int num_elements = out_gold.size * out_gold.size;
-   float eps = 1e-6;
+   float eps = EPS;
    int check = check_results (out_gold.element, out_gpu.element, num_elements, eps);
    if (check == 1) 
        printf ("TEST PASSED\n");
@@ -103,15 +117,21 @@ void compute_on_device (const image_t in, image_t out)
    // Set up execution grid and thread tiles
    dim3 threads( TILE_SIZE, TILE_SIZE );
    int grid_dimension = (filtered_dev.size + TILE_SIZE - 1) / TILE_SIZE;
-   printf( "Setting up a %d x %d grid of thread blocks\n", grid_dimension, grid_dimension );
+   printf( "\tSetting up a %d x %d grid of thread blocks\n", grid_dimension, grid_dimension );
 
    dim3 grid( grid_dimension, grid_dimension );
 
    // Launch the kernel
+   struct timeval start, stop;
+   gettimeofday( &start, NULL );
    blur_filter_kernel <<< grid, threads >>> ( filtered_dev.element, unfiltered_dev.element, in.size );
 
    // Sync device and host
    cudaDeviceSynchronize( );
+
+   gettimeofday( &stop, NULL );
+   print_exec_time( start, stop );
+
 
    // Check for errors
    check_CUDA_error( "Error in kernel execution" );
@@ -123,6 +143,13 @@ void compute_on_device (const image_t in, image_t out)
    free_image_on_device( &unfiltered_dev );
    free_image_on_device( &filtered_dev );
 
+   return;
+}
+
+void print_exec_time ( struct timeval start, struct timeval stop )
+{
+   printf( "Execution time:\t%fs\n", (float) (stop.tv_sec - start.tv_sec +\
+            (stop.tv_usec - start.tv_usec) / (float) 1000000) );
    return;
 }
 
@@ -161,13 +188,6 @@ void free_image_on_device ( image_t *I )
    return;
 }
 
-void free_image_on_host ( image_t *I )
-{
-   free( I->element );
-   I->element = NULL;
-   return;
-}
-
 // Check for errors during kernel execution
 void check_CUDA_error ( const char *msg )
 {
@@ -198,7 +218,7 @@ print_image (const image_t img)
     for (int i = 0; i < img.size; i++) {
         for (int j = 0; j < img.size; j++) {
             float val = img.element[i * img.size + j];
-            printf ("%0.4f ", val);
+            printf ("%0.4f\t", val);
         }
         printf ("\n");
     }
