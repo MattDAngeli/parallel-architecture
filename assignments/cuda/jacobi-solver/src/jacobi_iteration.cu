@@ -54,7 +54,11 @@ int main ( int argc, char** argv )
 
    /* Compute the Jacobi solution on the CPU. */
    printf ("Performing Jacobi iteration on the CPU\n");
+   struct timeval start, stop;
+   gettimeofday( &start, NULL );
    compute_gold (A, reference_x, B);
+   gettimeofday( &stop, NULL );
+   print_exec_time( start, stop );
    display_jacobi_solution (A, reference_x, B); /* Display statistics. */
 	
    /* Compute the Jacobi solution on the GPU. 
