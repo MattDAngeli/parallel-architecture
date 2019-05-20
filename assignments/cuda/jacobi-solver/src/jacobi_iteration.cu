@@ -17,7 +17,7 @@
 #include "jacobi_iteration_kernel.cu"
 
 /* Uncomment the line below if you want the code to spit out debug information. */ 
-/* #define DEBUG */
+//#define DEBUG
 
 int main ( int argc, char** argv ) 
 {
@@ -29,8 +29,7 @@ int main ( int argc, char** argv )
    matrix_t  A;                    /* N x N constant matrix. */
    matrix_t  B;                    /* N x 1 b matrix. */
    matrix_t reference_x;           /* Reference solution. */ 
-   matrix_t gpu_naive_solution_x;  /* Solution computed by naive kernel. */
-   matrix_t gpu_opt_solution_x;    /* Solution computed by optimized kernel. */
+   matrix_t gpu_hybrid_solution_x;  /* Solution computed by hybrid kernel. */
 
    /* Initialize the random number generator. */
    srand (time (NULL));
@@ -45,8 +44,7 @@ int main ( int argc, char** argv )
    /* Create the other vectors. */
    B = allocate_matrix_on_host (MATRIX_SIZE, 1, 1);
    reference_x = allocate_matrix_on_host (MATRIX_SIZE, 1, 0);
-   gpu_naive_solution_x = allocate_matrix_on_host (MATRIX_SIZE, 1, 0);
-   gpu_opt_solution_x = allocate_matrix_on_host (MATRIX_SIZE, 1, 0);
+   gpu_hybrid_solution_x = allocate_matrix_on_host (MATRIX_SIZE, 1, 0);
 
 #ifdef DEBUG
    print_matrix (A);
@@ -60,18 +58,16 @@ int main ( int argc, char** argv )
    display_jacobi_solution (A, reference_x, B); /* Display statistics. */
 	
    /* Compute the Jacobi solution on the GPU. 
-    * The solutions are returned in gpu_naive_solution_x and gpu_opt_solution_x. 
+    * The solutions are returned in gpu_hybrid_solution_x and gpu_opt_solution_x. 
     */
    printf ("\nPerforming Jacobi iteration on device. \n");
-   compute_on_device (A, gpu_naive_solution_x, gpu_opt_solution_x, B);
-   display_jacobi_solution (A, gpu_naive_solution_x, B); // Display statistics.
-   display_jacobi_solution (A, gpu_opt_solution_x, B); 
+   compute_on_device (A, gpu_hybrid_solution_x, B);
+   display_jacobi_solution (A, gpu_hybrid_solution_x, B); // Display statistics.
 
    free (A.elements); 
    free (B.elements); 
    free (reference_x.elements); 
-   free (gpu_naive_solution_x.elements);
-   free (gpu_opt_solution_x.elements);
+   free (gpu_hybrid_solution_x.elements);
 	
    exit (EXIT_SUCCESS);
 }
@@ -80,10 +76,57 @@ int main ( int argc, char** argv )
 /* FIXME: Complete this function to perform the Jacobi calculation on the GPU. */
 void compute_on_device (
       const matrix_t A, 
-      matrix_t gpu_naive_sol_x, 
-      matrix_t gpu_opt_sol_x, 
+      matrix_t gpu_hybrid_sol_x, 
       const matrix_t B )
 {
+   // Allocate data structures and copy data to GPU
+   matrix_t A_dev = allocate_matrix_on_device( A );
+   copy_matrix_to_device( A_dev, A );
+
+   matrix_t B_dev = allocate_matrix_on_device( B );
+   copy_matrix_to_device( B_dev, B );
+
+   matrix_t hybrid_soln_dev = allocate_matrix_on_device( gpu_hybrid_sol_x );
+
+   matrix_t temp_matrix = allocate_matrix_on_host( MATRIX_SIZE, 1, 0 );
+   matrix_t temp_matrix_dev = allocate_matrix_on_device( temp_matrix );
+
+   // Naive solution
+   // Set up execution grid and thread tiles for hybrid solution
+   dim3 threads_hybrid( THREAD_BLOCK_SIZE);
+   int grid_dimension_hybrid = (MATRIX_SIZE + THREAD_BLOCK_SIZE - 1) / THREAD_BLOCK_SIZE;
+   printf("\tSetting up a %d x 1 grid of thread blocks for hybrid solution\n",
+         grid_dimension_hybrid );
+
+   dim3 grid_hybrid( grid_dimension_hybrid );
+
+   // Launch hybrid kernel
+   struct timeval start, stop;
+   gettimeofday( &start, NULL );
+   jacobi_iteration_kernel_hybrid <<< grid_hybrid, threads_hybrid >>> ( 
+         hybrid_soln_dev.elements, temp_matrix_dev.elements, A_dev.elements, B_dev.elements );
+   
+   // Sync device and host
+   cudaDeviceSynchronize( );
+
+   gettimeofday( &stop, NULL );
+   print_exec_time( start, stop );
+
+   // Check for errors
+   check_CUDA_error ( "[CUDA Error] Kernel execution experienced an error" );
+
+   // Copy data from device to host
+   copy_matrix_from_device( gpu_hybrid_sol_x, hybrid_soln_dev );
+
+   // Free device memory
+   free_matrix_on_device( &A_dev );
+   free_matrix_on_device( &B_dev );
+   free_matrix_on_device( &hybrid_soln_dev );
+   free_matrix_on_device( &temp_matrix_dev );
+
+   // Free host memory
+   free( temp_matrix.elements );
+
    return;
 }
 
@@ -254,3 +297,16 @@ matrix_t create_diagonally_dominant_matrix ( unsigned int num_rows, unsigned int
    return M;
 }
 
+void free_matrix_on_device ( matrix_t *M )
+{
+   cudaFree( M->elements );
+   M->elements = NULL;
+   return;
+}
+
+void print_exec_time ( struct timeval start, struct timeval stop )
+{
+   printf( "Execution time: \t%fs\n", (float) (stop.tv_sec - start.tv_sec +\
+            (stop.tv_usec - start.tv_usec) / (float) 1000000) );
+   return;
+}
