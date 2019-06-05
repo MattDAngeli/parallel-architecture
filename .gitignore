@@ -1,12 +1,6 @@
 # Temporary files
 *.swp
 
-# Archives
-*.zip
-*.tar.*
-*.rar
-*.jar
-
 # Binaries and object files
 *.o
 *.exe
