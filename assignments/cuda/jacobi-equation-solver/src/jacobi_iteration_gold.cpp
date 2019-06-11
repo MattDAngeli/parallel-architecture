@@ -4,8 +4,7 @@
 #include <math.h>
 #include "jacobi_iteration.h"
 
-void
-compute_gold (const matrix_t A, matrix_t x, const matrix_t B)
+void compute_gold (const matrix_t A, matrix_t x, const matrix_t B)
 {
   unsigned int i, j, k;
   unsigned int num_rows = A.num_rows;
@@ -72,20 +71,20 @@ compute_gold (const matrix_t A, matrix_t x, const matrix_t B)
 /* Function to display statistic related to the Jacobi solution. */
 void display_jacobi_solution (const matrix_t A, const matrix_t x, const matrix_t B)
 {
-	double diff = 0.0;
-	unsigned int num_rows = A.num_rows;
-  unsigned int num_cols = A.num_columns;
+   double diff = 0.0;
+   unsigned int num_rows = A.num_rows;
+   unsigned int num_cols = A.num_columns;
 	
-  for (unsigned int i = 0; i < num_rows; i++) {
-    double line_sum = 0.0;
-    for (unsigned int j = 0; j < num_cols; j++){
-      line_sum += A.elements[i * num_cols + j] * x.elements[j];
-	  }
+   for (unsigned int i = 0; i < num_rows; i++) {
+      double line_sum = 0.0;
+      for (unsigned int j = 0; j < num_cols; j++){
+         line_sum += A.elements[i * num_cols + j] * x.elements[j];
+      }
 		
-    diff += fabsf (line_sum - B.elements[i]);
-	}
+      diff += fabsf (line_sum - B.elements[i]);
+   }
 
-	printf ("Average diff between LHS and RHS: %f \n", diff/(float) num_rows);
-  return;
+   printf ("Average diff between LHS and RHS: %f \n", diff/(float) num_rows);
+   return;
 }
 
