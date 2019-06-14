@@ -5,7 +5,8 @@
 #define MIN_NUMBER 2        /* Min number in the A and b matrices. */
 #define MAX_NUMBER 10       /* Max number in the A and b matrices. */
 
-#define THREAD_BLOCK_SIZE 128            /* Size of a thread block. */
+#define TILE_SIZE 32            /* Size of a thread tile. */
+#define THREAD_BLOCK_SIZE 128   /* Size of a thread block */
 
 #define MATRIX_SIZE 512
 #define NUM_COLUMNS MATRIX_SIZE         /* Number of columns in matrix A. */
@@ -33,6 +34,8 @@ void print_matrix (const matrix_t);
 float get_random_number (int, int);
 void check_CUDA_error (const char *);
 int check_results (float *, float *, int, float);
+void free_matrix_on_device ( matrix_t * );
+void print_exec_time ( struct timeval start, struct timeval stop );
 
 #endif /* _JACOBI_ITERATION_H_ */
 

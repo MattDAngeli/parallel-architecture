@@ -80,7 +80,92 @@ int main (int argc, char** argv)
 void 
 compute_on_device (const matrix_t A, matrix_t gpu_naive_sol_x, matrix_t gpu_opt_sol_x, const matrix_t B)
 {
-    return;
+   // Allocate data structures and copy data to GPU
+   matrix_t A_dev = allocate_matrix_on_device( A );
+   copy_matrix_to_device( A_dev, A );
+
+   matrix_t B_dev = allocate_matrix_on_device( B );
+   copy_matrix_to_device( B_dev, B );
+
+   matrix_t x_naive_dev = allocate_matrix_on_device( gpu_naive_sol_x );
+   copy_matrix_to_device( x_naive_dev, B );
+
+   matrix_t x_opt_dev = allocate_matrix_on_device( gpu_opt_sol_x );
+   copy_matrix_to_device( x_opt_dev, B );
+
+   // Set up execution grids and thread blocks/tiles
+   dim3 threads_naive( THREAD_BLOCK_SIZE );
+   dim3 threads_opt( TILE_SIZE, TILE_SIZE );
+
+   int grid_dimension_naive = ( MATRIX_SIZE + THREAD_BLOCK_SIZE - 1 ) / THREAD_BLOCK_SIZE;
+   dim3 grid_naive( grid_dimension_naive );
+
+   int grid_dimension_opt = ( MATRIX_SIZE + TILE_SIZE - 1 ) / TILE_SIZE;
+   dim3 grid_opt( 1, grid_dimension_opt );
+
+   // Launch the kernel
+   int done = 0;
+   double *mse_host = (double *) malloc( sizeof(double) );
+   double *mse_dev = NULL;
+   cudaMalloc( (double **) &mse_dev, sizeof(double) );
+
+   struct timeval start, stop;
+   gettimeofday( &start, NULL );
+
+   // Naive kernel
+   while (!done) {
+      jacobi_iteration_kernel_naive <<< grid_naive, threads_naive >>> (
+            x_naive_dev.elements, mse_dev, A_dev.elements, B_dev.elements );
+
+      // Sync device and host
+      cudaDeviceSynchronize( );
+
+      // Check for errors
+      check_CUDA_error( "[CUDA Error] Kernel execution experienced an error" );
+
+      cudaMemcpy( mse_host, mse_dev, sizeof( double ), cudaMemcpyDeviceToHost );
+
+      if ( *mse_host < THRESHOLD )
+         done = 1;
+   }
+
+   gettimeofday( &stop, NULL );
+   print_exec_time( start, stop );
+
+   done = 0;
+
+   gettimeofday( &start, NULL );
+   // Optimized kernel
+   while (!done) {
+      jacobi_iteration_kernel_optimized <<< grid_opt, threads_opt >>> (
+            x_opt_dev.elements, mse_dev, A_dev.elements, B_dev.elements );
+
+      // Sync device and host
+      cudaDeviceSynchronize( );
+
+      // Check for errors
+      check_CUDA_error( "[CUDA Error] Kernel execution experienced an error" );
+
+      cudaMemcpy( mse_host, mse_dev, sizeof( double ), cudaMemcpyDeviceToHost );
+
+      if ( *mse_host < THRESHOLD )
+         done = 1;
+   }
+   gettimeofday( &stop, NULL );
+   print_exec_time( start, stop );
+
+   // Copy data from device to hosts
+   copy_matrix_from_device( gpu_naive_sol_x, x_naive_dev );
+   copy_matrix_from_device( gpu_opt_sol_x, x_opt_dev );
+
+   // Free device memory
+   free_matrix_on_device( &A_dev );
+   free_matrix_on_device( &B_dev );
+   free_matrix_on_device( &x_naive_dev );
+   free_matrix_on_device( &x_opt_dev );
+   cudaFree( mse_dev );
+
+   return;
 }
 
 /* Allocate matrix on the device of same size as M. */
@@ -250,5 +335,17 @@ matrix_t create_diagonally_dominant_matrix (unsigned int num_rows, unsigned int 
   return M;
 }
 
+void free_matrix_on_device ( matrix_t *M )
+{
+   cudaFree( M->elements );
+   M->elements = NULL;
+   return;
+}
 
+void print_exec_time ( struct timeval start, struct timeval stop )
+{
+   printf( "Execution time:\t%fs\n", (float) (stop.tv_sec - start.tv_sec +\
+            (stop.tv_usec - start.tv_usec) / (float) 1000000) );
+   return;
+}
 
