@@ -19,7 +19,7 @@
 /* Do not change the range value. */
 #define MIN_VALUE 0
 #define MAX_VALUE 255
-//#define DEBUG 
+#define DEBUG 
 
 extern "C" int counting_sort_gold (int *, int *, int, int);
 int rand_int (int, int);
@@ -129,14 +129,12 @@ compute_on_device (int *input_array, int *sorted_array, int num_elements, int ra
    int *scan_pong_dev = NULL;
 
 #ifdef DEBUG
-   /*
+   
    int *hist = (int *) malloc( range * sizeof( int ) );
    memset( hist, 0, range * sizeof( int ) );
    int *scan = (int *) malloc( range * sizeof( int ) );
    memset( scan, 0, range * sizeof( int ) );
-   int *scan_pong = (int *) malloc( range * sizeof( int ) );
-   memset( scan_pong, 0, range * sizeof( int ) );
-   */
+   
 #endif
 
    cudaMalloc( (void **) &input_array_dev, num_elements * sizeof( int ) );
@@ -172,36 +170,23 @@ compute_on_device (int *input_array, int *sorted_array, int num_elements, int ra
    print_exec_time( start, stop );
 
 #ifdef DEBUG
-   /*
+   
    cudaMemcpy( scan, scan_dev, range * sizeof( int ), cudaMemcpyDeviceToHost );
    cudaMemcpy( hist, hist_dev, range * sizeof( int ), cudaMemcpyDeviceToHost );
-   cudaMemcpy( scan_pong, scan_pong_dev, range * sizeof( int ), cudaMemcpyDeviceToHost );
 
-   printf("[");
-   for (int i = 0; i < range; i++)
-      printf("%d, ", hist[i]);
-   printf("]\n");
+   printf("Histogram:\n");
+   print_array( hist, range );
 
-   printf("[");
-   for (int i = 0; i < range; i++)
-      printf("%d, ", scan[i]);
-   printf("]\n");
-
-   printf("[");
-   for (int i = 0; i < range; i++)
-      printf("%d, ", scan_pong[i]);
-   printf("]\n");
-   */
+   printf("Scan:\n");
+   print_array( scan, range );
+   
 #endif
 
    cudaMemcpy( sorted_array, sorted_array_dev, num_elements * sizeof( int ), cudaMemcpyDeviceToHost );
 
 #ifdef DEBUG
-   /*
    free( hist );
    free( scan );
-   free( scan_pong );
-   */
 #endif
 
    cudaFree( input_array_dev );

@@ -53,19 +53,18 @@ void counting_sort_kernel (
          scan_stride *= 2;
          __syncthreads();
       }
-      __syncthreads();
    }
+
+   __syncthreads();
    
-   if (threadIdx.x < RANGE) {
+   // Perform the counting sort
+   if (tid < RANGE) {
       int t = tid;
       while (t < num_elements) {
          int histIdx = in[t];
-         int histVal = hist[histIdx];
-         while (histVal) {
-            int outIdx = scan[in[t]] - histVal;
-            out[outIdx] = in[t];
-            histVal--;
-         }
+         int histVal = atomicSub( &hist[histIdx], 1 );
+         int outIdx = scan[in[t]] - histVal;
+         out[outIdx] = in[t];
          t += RANGE;
          __syncthreads();
       }
