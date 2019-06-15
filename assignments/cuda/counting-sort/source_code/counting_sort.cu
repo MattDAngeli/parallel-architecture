@@ -19,7 +19,7 @@
 /* Do not change the range value. */
 #define MIN_VALUE 0
 #define MAX_VALUE 255
-#define DEBUG 
+//#define DEBUG 
 
 extern "C" int counting_sort_gold (int *, int *, int, int);
 int rand_int (int, int);
